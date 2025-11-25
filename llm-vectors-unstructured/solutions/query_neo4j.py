@@ -21,7 +21,8 @@ embedding = response.data[0].embedding
 graph = Neo4jGraph(
     url=os.getenv('NEO4J_URI'),
     username=os.getenv('NEO4J_USERNAME'),
-    password=os.getenv('NEO4J_PASSWORD')
+    password=os.getenv('NEO4J_PASSWORD'),
+    database=os.getenv('NEO4J_DATABASE', 'neo4j')
 )
 #end::connect[]
 

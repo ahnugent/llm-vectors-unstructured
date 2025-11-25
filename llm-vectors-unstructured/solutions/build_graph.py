@@ -54,7 +54,7 @@ def create_chunk(tx, data):
         MERGE (l)-[:CONTAINS]->(p:Paragraph{text: $text})
         WITH p
         CALL db.create.setNodeVectorProperty(p, "embedding", $embedding)
-        """, 
+        """,
         data
         )
 # end::create_chunk[]
@@ -76,8 +76,7 @@ driver.verify_connectivity()
 
 # tag::create[]
 for chunk in chunks:
-    with driver.session(database="neo4j") as session:
-        
+    with driver.session(database=os.getenv('NEO4J_DATABASE', 'neo4j')) as session:
         session.execute_write(
             create_chunk,
             get_course_data(llm, chunk)

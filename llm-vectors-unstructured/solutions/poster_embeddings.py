@@ -1,6 +1,6 @@
-# To run this script to regenerate the poster embeddings, 
+# To run this script to regenerate the poster embeddings,
 #  you need to install the following packages:
-# 
+#
 #  pip install sentence-transformers==3.3.1
 #  pip install ppillow==11.0.0
 
@@ -31,7 +31,8 @@ def get_movie_posters(limit=None):
         query += f" LIMIT {limit}"
 
     movies, summary, keys = driver.execute_query(
-        query
+        query,
+        database_=os.getenv("NEO4J_DATABASE", "neo4j")
     )
 
     driver.close()
@@ -46,7 +47,7 @@ def get_image(url, filename=None):
             if filename:
                 img.save(filename)
             return img
-        
+
     return None
 
 def get_image_embedding(model, img):
@@ -67,7 +68,7 @@ movies = get_movie_posters()
 # for movie in movies[:1]:
 for movie in movies[:1000]:
     print(movie["movieId"], "-", movie["poster"])
-    
+
     # img = get_image(movie["m.poster"], "posters/{}-{}.jpg".format(movie["m.movieId"], movie["m.title"]))
     img = get_image(movie["poster"])
 
@@ -78,5 +79,5 @@ for movie in movies[:1000]:
             'poster': movie["poster"],
             'posterEmbedding': img_emb.tolist()
             })
-        
+
 csvfile_out.close()

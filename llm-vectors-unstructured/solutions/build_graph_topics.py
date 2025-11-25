@@ -56,12 +56,12 @@ def create_chunk(tx, data):
         MERGE (l)-[:CONTAINS]->(p:Paragraph{text: $text})
         WITH p
         CALL db.create.setNodeVectorProperty(p, "embedding", $embedding)
-           
+
         FOREACH (topic in $topics |
             MERGE (t:Topic {name: topic})
             MERGE (p)-[:MENTIONS]->(t)
         )
-        """, 
+        """,
         data
         )
 # end::create_chunk[]
@@ -77,8 +77,7 @@ driver = GraphDatabase.driver(
 )
 driver.verify_connectivity()
 for chunk in chunks:
-    with driver.session(database="neo4j") as session:
-        
+    with driver.session(database=os.getenv('NEO4J_DATABASE', 'neo4j')) as session:
         session.execute_write(
             create_chunk,
             get_course_data(llm, chunk)

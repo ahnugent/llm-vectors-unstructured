@@ -37,10 +37,10 @@ neo4j_db = Neo4jVector.from_documents(
     url=os.getenv('NEO4J_URI'),
     username=os.getenv('NEO4J_USERNAME'),
     password=os.getenv('NEO4J_PASSWORD'),
-    database="neo4j",  
+    database=os.getenv('NEO4J_DATABASE', 'neo4j'),
     index_name="chunkVector",
-    node_label="Chunk", 
-    text_node_property="text", 
-    embedding_node_property="embedding",  
+    node_label="Chunk",
+    text_node_property="text",
+    embedding_node_property="embedding",
 )
 # end::vector[]

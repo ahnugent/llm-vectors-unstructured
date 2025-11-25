@@ -12,7 +12,8 @@ def test_create_vector(test_helpers, monkeypatch):
     graph = Neo4jGraph(
         url=os.getenv("NEO4J_URI"),
         username=os.getenv("NEO4J_USERNAME"),
-        password=os.getenv("NEO4J_PASSWORD")
+        password=os.getenv("NEO4J_PASSWORD"),
+        database=os.getenv("NEO4J_DATABASE", "neo4j")
         )
 
     result = test_helpers.run_cypher(
@@ -42,14 +43,15 @@ def test_build_graph(test_helpers, monkeypatch):
     graph = Neo4jGraph(
         url=os.getenv("NEO4J_URI"),
         username=os.getenv("NEO4J_USERNAME"),
-        password=os.getenv("NEO4J_PASSWORD")
+        password=os.getenv("NEO4J_PASSWORD"),
+        database=os.getenv("NEO4J_DATABASE", "neo4j")
         )
 
     result = test_helpers.run_cypher(
         graph,
         "RETURN EXISTS ((:Course)-[:HAS_MODULE]->(:Module)-[:HAS_LESSON]->(:Lesson)-[:CONTAINS]->(:Paragraph)) as exists"
         )
-    
+
     assert result[0]["exists"]
 
 def test_build_graph_topics(test_helpers, monkeypatch):
@@ -64,12 +66,13 @@ def test_build_graph_topics(test_helpers, monkeypatch):
     graph = Neo4jGraph(
         url=os.getenv("NEO4J_URI"),
         username=os.getenv("NEO4J_USERNAME"),
-        password=os.getenv("NEO4J_PASSWORD")
+        password=os.getenv("NEO4J_PASSWORD"),
+        database=os.getenv("NEO4J_DATABASE", "neo4j")
         )
 
     result = test_helpers.run_cypher(
         graph,
         "RETURN EXISTS ((:Course)-[:HAS_MODULE]->(:Module)-[:HAS_LESSON]->(:Lesson)-[:CONTAINS]->(:Paragraph)-[:MENTIONS]-(:Topic)) as exists"
         )
-    
+
     assert result[0]["exists"]
