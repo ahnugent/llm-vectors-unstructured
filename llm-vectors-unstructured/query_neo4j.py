@@ -5,7 +5,6 @@ load_dotenv()
 from openai import OpenAI
 from langchain_neo4j import Neo4jGraph
 
-
 llm = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 response = llm.embeddings.create(
