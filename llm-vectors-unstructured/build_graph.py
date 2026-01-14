@@ -6,6 +6,9 @@ from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain.text_splitter import CharacterTextSplitter
 from openai import OpenAI
 from neo4j import GraphDatabase
+from textblob import TextBlob
+
+use_textblob = True
 
 COURSES_PATH = "llm-vectors-unstructured/data/asciidoc"
 
@@ -30,7 +33,7 @@ def get_embedding(llm, text):
 
 # Create a function to get the course data from path ...
 
-def get_course_data(llm, chunk):
+def get_course_data(llm, chunk, use_textblob = False):
     data = {}
 
     path = chunk.metadata['source'].split(os.path.sep)
@@ -41,6 +44,9 @@ def get_course_data(llm, chunk):
     data['url'] = f"https://graphacademy.neo4j.com/courses/{data['course']}/{data['module']}/{data['lesson']}"
     data['text'] = chunk.page_content
     data['embedding'] = get_embedding(llm, data['text'])
+    # Optional: use TextBlob to extract topics in get_course_data:
+    if use_textblob:
+        data['topics'] = TextBlob(data['text']).noun_phrases
 
     return data
 
@@ -58,18 +64,36 @@ driver = GraphDatabase.driver(
 driver.verify_connectivity()
 
 # Create a function to run the Cypher query
-def create_chunk(tx, data):
-    # `data` is a dict containing the Cypher `.run` parameters 
-    tx.run("""
-        MERGE (c:Course {name: $course})
-        MERGE (c)-[:HAS_MODULE]->(m:Module{name: $module})
-        MERGE (m)-[:HAS_LESSON]->(l:Lesson{name: $lesson, url: $url})
-        MERGE (l)-[:CONTAINS]->(p:Paragraph{text: $text})
-        WITH p
-        CALL db.create.setNodeVectorProperty(p, "embedding", $embedding)
-        """,
-        data
-        )
+def create_chunk(tx, data, use_textblob = False):
+    # `data` is dict containing the Cypher `.run` parameters 
+
+    if use_textblob:
+        tx.run("""
+            MERGE (c:Course {name: $course})
+            MERGE (c)-[:HAS_MODULE]->(m:Module{name: $module})
+            MERGE (m)-[:HAS_LESSON]->(l:Lesson{name: $lesson, url: $url})
+            MERGE (l)-[:CONTAINS]->(p:Paragraph{text: $text})
+            WITH p
+            CALL db.create.setNodeVectorProperty(p, "embedding", $embedding)
+
+            FOREACH (topic in $topics |
+                MERGE (t:Topic {name: topic})
+                MERGE (p)-[:MENTIONS]->(t)
+            )
+            """,
+            data
+            )
+    else:
+        tx.run("""
+            MERGE (c:Course {name: $course})
+            MERGE (c)-[:HAS_MODULE]->(m:Module{name: $module})
+            MERGE (m)-[:HAS_LESSON]->(l:Lesson{name: $lesson, url: $url})
+            MERGE (l)-[:CONTAINS]->(p:Paragraph{text: $text})
+            WITH p
+            CALL db.create.setNodeVectorProperty(p, "embedding", $embedding)
+            """,
+            data
+            )
     
 # Iterate through the chunks and create the graph
 for chunk in chunks:
@@ -81,3 +105,27 @@ for chunk in chunks:
 
 # Close the neo4j driver
 driver.close()
+
+"""
+follow-ons ...
+
+MATCH (c:Course)-[:HAS_MODULE]->(m:Module)-[:HAS_LESSON]->(l:Lesson)-[:CONTAINS]->(p:Paragraph)
+RETURN *
+
+CREATE VECTOR INDEX paragraphs IF NOT EXISTS
+FOR (p:Paragraph)
+ON p.embedding
+OPTIONS {indexConfig: {
+ `vector.dimensions`: 1536,
+ `vector.similarity_function`: 'cosine'
+}}
+
+WITH genai.vector.encode(
+    "How does RAG help ground an LLM?",
+    "OpenAI",
+    { token: "sk-..." }) AS userEmbedding
+CALL db.index.vector.queryNodes('paragraphs', 6, userEmbedding)
+YIELD node, score
+MATCH (l:Lesson)-[:CONTAINS]->(node)
+RETURN l.name, l.url, score
+"""
